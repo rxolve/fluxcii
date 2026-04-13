@@ -1,0 +1,37 @@
+{
+  "name": "vecscii",
+  "version": "0.1.0",
+  "description": "Vector illustration MCP server for AI agents",
+  "mcpName": "io.github.rxolve/vecscii",
+  "type": "module",
+  "main": "./dist/mcp.js",
+  "bin": {
+    "vecscii": "dist/mcp.js"
+  },
+  "files": [
+    "dist/",
+    "palettes/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "tsx src/mcp.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}

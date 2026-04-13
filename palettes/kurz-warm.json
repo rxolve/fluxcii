@@ -1,0 +1,21 @@
+{
+  "id": "kurz-warm",
+  "name": "Kurzgesagt Warm",
+  "theme": "Sunset, energy, warmth",
+  "colors": [
+    { "name": "deep-red", "hex": "#4A0E0E" },
+    { "name": "crimson", "hex": "#C0392B" },
+    { "name": "flame", "hex": "#E74C3C" },
+    { "name": "orange", "hex": "#FF7F11" },
+    { "name": "amber", "hex": "#F9A825" },
+    { "name": "gold", "hex": "#FFD700" },
+    { "name": "sunlight", "hex": "#FFF3B0" },
+    { "name": "peach", "hex": "#FFDAB9" },
+    { "name": "rose", "hex": "#FF6B81" },
+    { "name": "burgundy", "hex": "#6B2737" },
+    { "name": "chocolate", "hex": "#5D3A1A" },
+    { "name": "cream", "hex": "#FFFDD0" }
+  ],
+  "background": "#4A0E0E",
+  "foreground": "#FFFDD0"
+}

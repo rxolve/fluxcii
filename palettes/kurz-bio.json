@@ -1,0 +1,21 @@
+{
+  "id": "kurz-bio",
+  "name": "Kurzgesagt Biology",
+  "theme": "Organic, cellular, natural",
+  "colors": [
+    { "name": "deep-green", "hex": "#0A3D2A" },
+    { "name": "forest", "hex": "#1B5E3A" },
+    { "name": "emerald", "hex": "#2ECC71" },
+    { "name": "lime", "hex": "#7DDF64" },
+    { "name": "teal", "hex": "#1ABC9C" },
+    { "name": "aqua", "hex": "#48D1CC" },
+    { "name": "cream", "hex": "#FFF8E7" },
+    { "name": "coral", "hex": "#FF6B6B" },
+    { "name": "amber", "hex": "#F0A830" },
+    { "name": "bark", "hex": "#5D4037" },
+    { "name": "moss", "hex": "#4A7C59" },
+    { "name": "petal", "hex": "#FFB7C5" }
+  ],
+  "background": "#0A3D2A",
+  "foreground": "#FFF8E7"
+}

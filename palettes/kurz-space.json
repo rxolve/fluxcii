@@ -1,0 +1,21 @@
+{
+  "id": "kurz-space",
+  "name": "Kurzgesagt Space",
+  "theme": "Deep space, cosmic, stellar",
+  "colors": [
+    { "name": "void", "hex": "#0B0E1A" },
+    { "name": "deep-blue", "hex": "#0D1B3E" },
+    { "name": "navy", "hex": "#142952" },
+    { "name": "royal-blue", "hex": "#1E3F7A" },
+    { "name": "bright-blue", "hex": "#2E7DFF" },
+    { "name": "cyan", "hex": "#4DE8E0" },
+    { "name": "magenta", "hex": "#E040A0" },
+    { "name": "purple", "hex": "#7B2FBE" },
+    { "name": "star-glow", "hex": "#FFF5CC" },
+    { "name": "white", "hex": "#FFFFFF" },
+    { "name": "nebula-pink", "hex": "#FF6FA3" },
+    { "name": "solar-orange", "hex": "#FF8C42" }
+  ],
+  "background": "#0B0E1A",
+  "foreground": "#FFFFFF"
+}

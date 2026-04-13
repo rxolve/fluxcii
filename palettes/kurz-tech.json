@@ -1,0 +1,21 @@
+{
+  "id": "kurz-tech",
+  "name": "Kurzgesagt Technology",
+  "theme": "Digital, circuits, futuristic",
+  "colors": [
+    { "name": "black", "hex": "#0A0A0A" },
+    { "name": "dark-gray", "hex": "#1A1A2E" },
+    { "name": "gunmetal", "hex": "#2C3E50" },
+    { "name": "steel", "hex": "#7F8C8D" },
+    { "name": "silver", "hex": "#BDC3C7" },
+    { "name": "electric-blue", "hex": "#00D4FF" },
+    { "name": "neon-cyan", "hex": "#00FFCC" },
+    { "name": "circuit-green", "hex": "#39FF14" },
+    { "name": "data-purple", "hex": "#8E44FF" },
+    { "name": "warning-red", "hex": "#FF3838" },
+    { "name": "signal-yellow", "hex": "#FFD600" },
+    { "name": "white", "hex": "#F0F0F0" }
+  ],
+  "background": "#0A0A0A",
+  "foreground": "#F0F0F0"
+}
