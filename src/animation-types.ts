@@ -1,0 +1,59 @@
+// ── Easing ──
+
+export type EasingName =
+  | 'linear'
+  | 'ease-in'
+  | 'ease-out'
+  | 'ease-in-out'
+  | 'ease-in-cubic'
+  | 'ease-out-cubic'
+  | 'ease-in-out-cubic';
+
+// ── Animatable properties ──
+
+export type AnimatableProperty =
+  | 'transform.translate.x'
+  | 'transform.translate.y'
+  | 'transform.rotate'
+  | 'transform.scale'
+  | 'transform.scale.x'
+  | 'transform.scale.y'
+  | 'style.opacity'
+  | 'style.fill'
+  | 'style.stroke.color'
+  | 'style.stroke.width'
+  | 'x'
+  | 'y'
+  | 'width'
+  | 'height'
+  | 'cx'
+  | 'cy'
+  | 'r'
+  | 'rx'
+  | 'ry'
+  | 'x1'
+  | 'y1'
+  | 'x2'
+  | 'y2'
+  | 'fontSize';
+
+// ── Keyframe / Track / Animation ──
+
+export interface Keyframe {
+  frame: number;
+  value: number | string;
+  easing?: EasingName;
+}
+
+export interface Track {
+  nodeId: string;
+  property: AnimatableProperty;
+  keyframes: Keyframe[];
+}
+
+export interface Animation {
+  id: string;
+  sceneId: string;
+  totalFrames: number;
+  tracks: Track[];
+}

@@ -18,10 +18,19 @@ import {
 } from './scene.js';
 import { resolveStyle } from './style.js';
 import { renderToBase64 } from './render.js';
-import { generateSceneId, storeScene, getScene, savePrev } from './store.js';
+import {
+  generateSceneId, storeScene, getScene, savePrev,
+  generateAnimId, storeAnimation, getAnimation,
+} from './store.js';
+import { generateFrames } from './animate.js';
+import type { Animation, Track, Keyframe, AnimatableProperty, EasingName } from './animation-types.js';
+import { findNode } from './scene.js';
 import { inspectScene } from './inspect.js';
 import type { Style, FillValue, Gradient, LinearGradient, RadialGradient, Point } from './types.js';
-import { DEFAULT_WIDTH, DEFAULT_HEIGHT, MAX_SCENE_WIDTH, MAX_SCENE_HEIGHT } from './constants.js';
+import {
+  DEFAULT_WIDTH, DEFAULT_HEIGHT, MAX_SCENE_WIDTH, MAX_SCENE_HEIGHT,
+  MAX_ANIMATION_FRAMES, MAX_TRACKS_PER_ANIMATION,
+} from './constants.js';
 
 const server = new McpServer({
   name: 'vecscii',
@@ -402,6 +411,206 @@ server.tool(
     }
   },
 );
+
+// ── Animation Zod schemas ──
+
+const EasingNameSchema = z.enum([
+  'linear', 'ease-in', 'ease-out', 'ease-in-out',
+  'ease-in-cubic', 'ease-out-cubic', 'ease-in-out-cubic',
+]).optional().describe('Easing function (default: linear)');
+
+const AnimatablePropertySchema = z.enum([
+  'transform.translate.x', 'transform.translate.y',
+  'transform.rotate', 'transform.scale', 'transform.scale.x', 'transform.scale.y',
+  'style.opacity', 'style.fill', 'style.stroke.color', 'style.stroke.width',
+  'x', 'y', 'width', 'height', 'cx', 'cy', 'r', 'rx', 'ry',
+  'x1', 'y1', 'x2', 'y2', 'fontSize',
+]).describe('Property to animate');
+
+const KeyframeSchema = z.object({
+  frame: z.number().int().min(0).describe('Frame number'),
+  value: z.union([z.number(), z.string()]).describe('Value at this keyframe'),
+  easing: EasingNameSchema,
+});
+
+const TrackSchema = z.object({
+  node_name: z.string().describe('Name of the element to animate (matches element name)'),
+  property: AnimatablePropertySchema,
+  keyframes: z.array(KeyframeSchema).min(1).describe('Keyframe values'),
+});
+
+// ── Tool: animate_illustration ──
+
+server.tool(
+  'animate_illustration',
+  'Create an animated illustration in one call. Provide elements and animation tracks. Returns PNG frames.',
+  {
+    width: z.number().int().min(1).max(MAX_SCENE_WIDTH).default(DEFAULT_WIDTH).describe('Canvas width'),
+    height: z.number().int().min(1).max(MAX_SCENE_HEIGHT).default(DEFAULT_HEIGHT).describe('Canvas height'),
+    background: z.string().optional().describe('Background color'),
+    palette: z.string().optional().describe('Palette ID'),
+    elements: z.array(ElementSchema).describe('Array of shape/text/group elements'),
+    total_frames: z.number().int().min(1).max(MAX_ANIMATION_FRAMES).describe('Total number of frames'),
+    tracks: z.array(TrackSchema).max(MAX_TRACKS_PER_ANIMATION).describe('Animation tracks (use node_name to reference elements)'),
+  },
+  async ({ width, height, background, palette, elements, total_frames, tracks }) => {
+    try {
+      const id = generateSceneId();
+      const scene = createScene(id, width, height, background, palette);
+      for (const el of elements) {
+        addElement(scene, el);
+      }
+      storeScene(scene);
+
+      // Resolve node_name → nodeId by searching the scene tree
+      const resolvedTracks: Track[] = [];
+      for (const t of tracks) {
+        const node = findNodeByName(scene.root, t.node_name);
+        if (!node) throw new Error(`Element with name "${t.node_name}" not found`);
+        resolvedTracks.push({
+          nodeId: node.id,
+          property: t.property as AnimatableProperty,
+          keyframes: t.keyframes.map((kf) => ({
+            frame: kf.frame,
+            value: kf.value,
+            easing: kf.easing as EasingName | undefined,
+          })),
+        });
+      }
+
+      const animation: Animation = {
+        id: generateAnimId(),
+        sceneId: scene.id,
+        totalFrames: total_frames,
+        tracks: resolvedTracks,
+      };
+      storeAnimation(animation);
+
+      const frames = generateFrames(scene, animation);
+      const info = inspectScene(scene);
+      return {
+        content: [
+          { type: 'text' as const, text: `${info}\n\nAnimation: ${animation.id} | ${total_frames} frames | ${resolvedTracks.length} tracks` },
+          ...frames.map((data) => ({
+            type: 'image' as const,
+            data,
+            mimeType: 'image/png' as const,
+          })),
+        ],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: create_animation ──
+
+server.tool(
+  'create_animation',
+  'Create an animation for an existing scene. Returns animation ID for add_track calls.',
+  {
+    scene_id: z.string().describe('Scene ID'),
+    total_frames: z.number().int().min(1).max(MAX_ANIMATION_FRAMES).describe('Total number of frames'),
+  },
+  async ({ scene_id, total_frames }) => {
+    try {
+      getScene(scene_id); // validate scene exists
+      const anim: Animation = {
+        id: generateAnimId(),
+        sceneId: scene_id,
+        totalFrames: total_frames,
+        tracks: [],
+      };
+      storeAnimation(anim);
+      return { content: [{ type: 'text' as const, text: `Created animation ${anim.id} for scene ${scene_id} (${total_frames} frames)` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: add_track ──
+
+server.tool(
+  'add_track',
+  'Add an animation track to an existing animation. Each track animates one property on one node.',
+  {
+    anim_id: z.string().describe('Animation ID'),
+    node_id: z.string().describe('Node ID to animate'),
+    property: AnimatablePropertySchema,
+    keyframes: z.array(KeyframeSchema).min(1).describe('Keyframe values'),
+  },
+  async ({ anim_id, node_id, property, keyframes }) => {
+    try {
+      const anim = getAnimation(anim_id);
+      if (anim.tracks.length >= MAX_TRACKS_PER_ANIMATION) {
+        throw new Error(`Animation has reached max track limit (${MAX_TRACKS_PER_ANIMATION})`);
+      }
+      // Validate node exists in scene
+      const scene = getScene(anim.sceneId);
+      if (node_id !== 'root' && !findNode(scene.root, node_id)) {
+        throw new Error(`Node "${node_id}" not found in scene ${anim.sceneId}`);
+      }
+      const track: Track = {
+        nodeId: node_id,
+        property: property as AnimatableProperty,
+        keyframes: keyframes.map((kf) => ({
+          frame: kf.frame,
+          value: kf.value,
+          easing: kf.easing as EasingName | undefined,
+        })),
+      };
+      anim.tracks.push(track);
+      return { content: [{ type: 'text' as const, text: `Added track: ${node_id}.${property} (${keyframes.length} keyframes) to ${anim_id}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: render_animation ──
+
+server.tool(
+  'render_animation',
+  'Render all frames of an animation to PNG images.',
+  {
+    anim_id: z.string().describe('Animation ID'),
+  },
+  async ({ anim_id }) => {
+    try {
+      const anim = getAnimation(anim_id);
+      const scene = getScene(anim.sceneId);
+      const frames = generateFrames(scene, anim);
+      const info = inspectScene(scene);
+      return {
+        content: [
+          { type: 'text' as const, text: `${info}\n\nAnimation: ${anim.id} | ${anim.totalFrames} frames | ${anim.tracks.length} tracks` },
+          ...frames.map((data) => ({
+            type: 'image' as const,
+            data,
+            mimeType: 'image/png' as const,
+          })),
+        ],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Helper: find node by name ──
+
+function findNodeByName(root: import('./types.js').GroupNode, name: string): import('./types.js').SceneNode | null {
+  for (const child of root.children) {
+    if (child.name === name) return child;
+    if (child.type === 'group') {
+      const found = findNodeByName(child, name);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 
 // ── Main ──
 

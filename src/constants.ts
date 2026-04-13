@@ -12,5 +12,11 @@ export const DEFAULT_PALETTE = 'kurz-space';
 export const DEFAULT_FONT_SIZE = 24;
 export const DEFAULT_FONT_FAMILY = 'sans-serif';
 
+// Animation limits
+export const MAX_ANIMATION_FRAMES = 32;
+export const MAX_TRACKS_PER_ANIMATION = 32;
+export const MAX_ANIMATION_COUNT = 10;
+
 // IDs
 export const SCENE_ID_PREFIX = 'scn';
+export const ANIM_ID_PREFIX = 'anim';
