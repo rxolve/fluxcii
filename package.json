@@ -2,6 +2,7 @@
   "name": "vecscii",
   "version": "0.1.0",
   "description": "Vector illustration MCP server for AI agents",
+  "license": "MIT",
   "mcpName": "io.github.rxolve/vecscii",
   "type": "module",
   "main": "./dist/mcp.js",
