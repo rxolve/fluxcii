@@ -14,6 +14,7 @@ import {
   addPath,
   addText,
   addGroup,
+  addImage,
   setNodeStyle,
 } from './scene.js';
 import { resolveStyle } from './style.js';
@@ -26,6 +27,7 @@ import { generateFrames, generateBuffers } from './animate.js';
 import { encodeGif } from './export-gif.js';
 import { encodeApng } from './export-apng.js';
 import { createSpritesheet } from './export-spritesheet.js';
+import { generateSpriteSheet, sliceSpriteSheet, removeWhiteBg } from './gemini.js';
 import type { Animation, Track, PathTrack, Keyframe, AnimatableProperty, EasingName, PlaybackMode } from './animation-types.js';
 import { findNode } from './scene.js';
 import { inspectScene } from './inspect.js';
@@ -86,7 +88,7 @@ const TransformSchema = z.object({
 }).optional();
 
 interface ElementInput {
-  type: 'rect' | 'circle' | 'ellipse' | 'line' | 'polygon' | 'path' | 'text' | 'group';
+  type: 'rect' | 'circle' | 'ellipse' | 'line' | 'polygon' | 'path' | 'text' | 'image' | 'group';
   name?: string;
   x?: number; y?: number; width?: number; height?: number;
   rx?: number; ry?: number;
@@ -96,13 +98,14 @@ interface ElementInput {
   d?: string;
   text?: string; fontSize?: number; fontFamily?: string; fontWeight?: string;
   textAnchor?: 'start' | 'middle' | 'end';
+  href?: string;
   style?: z.infer<typeof StyleSchema>;
   transform?: z.infer<typeof TransformSchema>;
   children?: ElementInput[];
 }
 
 const ElementSchema: z.ZodType<ElementInput> = z.object({
-  type: z.enum(['rect', 'circle', 'ellipse', 'line', 'polygon', 'path', 'text', 'group']),
+  type: z.enum(['rect', 'circle', 'ellipse', 'line', 'polygon', 'path', 'text', 'image', 'group']),
   name: z.string().optional(),
   x: z.number().optional(),
   y: z.number().optional(),
@@ -124,6 +127,7 @@ const ElementSchema: z.ZodType<ElementInput> = z.object({
   fontFamily: z.string().optional(),
   fontWeight: z.string().optional(),
   textAnchor: z.enum(['start', 'middle', 'end']).optional(),
+  href: z.string().optional(),
   style: StyleSchema,
   transform: TransformSchema,
   children: z.array(z.lazy(() => ElementSchema)).optional(),
@@ -154,6 +158,9 @@ function addElement(scene: ReturnType<typeof createScene>, el: ElementInput, par
       break;
     case 'text':
       addText(scene, { x: el.x ?? 0, y: el.y ?? 0, text: el.text ?? '', fontSize: el.fontSize, fontFamily: el.fontFamily, fontWeight: el.fontWeight, textAnchor: el.textAnchor, ...common }, parentId);
+      break;
+    case 'image':
+      addImage(scene, { x: el.x ?? 0, y: el.y ?? 0, width: el.width ?? 100, height: el.height ?? 100, href: el.href ?? '', ...common }, parentId);
       break;
     case 'group': {
       const g = addGroup(scene, common, parentId);
@@ -311,6 +318,40 @@ server.tool(
         name: args.name, style: args.style as Style | undefined, transform: args.transform,
       }, args.parent_id);
       return { content: [{ type: 'text' as const, text: `Added text "${args.name ?? node.id}" (${node.id}) to ${args.scene_id}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: add_image ──
+
+server.tool(
+  'add_image',
+  'Add a raster image (PNG/JPEG) to a scene. Provide raw base64 image data.',
+  {
+    scene_id: z.string().describe('Scene ID'),
+    image_data: z.string().describe('Raw base64-encoded image data'),
+    mime_type: z.enum(['image/png', 'image/jpeg']).default('image/png').describe('Image MIME type'),
+    x: z.number().describe('X position'),
+    y: z.number().describe('Y position'),
+    width: z.number().describe('Display width'),
+    height: z.number().describe('Display height'),
+    name: z.string().optional().describe('Name for the image node'),
+    parent_id: z.string().optional().describe('Parent group ID'),
+    style: StyleSchema,
+    transform: TransformSchema,
+  },
+  async (args) => {
+    try {
+      const scene = getScene(args.scene_id);
+      savePrev(scene);
+      const href = `data:${args.mime_type};base64,${args.image_data}`;
+      const node = addImage(scene, {
+        x: args.x, y: args.y, width: args.width, height: args.height,
+        href, name: args.name, style: args.style as Style | undefined, transform: args.transform,
+      }, args.parent_id);
+      return { content: [{ type: 'text' as const, text: `Added image "${args.name ?? node.id}" (${node.id}) to ${args.scene_id}` }] };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
     }
@@ -747,6 +788,83 @@ server.tool(
             mimeType: 'image/png' as const,
           },
         ],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: generate_sprite ──
+
+server.tool(
+  'generate_sprite',
+  'Generate an AI sprite sheet via Gemini, auto-slice into frames, and add to scene. Requires GEMINI_API_KEY env var.',
+  {
+    scene_id: z.string().describe('Target scene ID'),
+    prompt: z.string().describe('Character/sprite description (e.g. "a running pixel art cat")'),
+    frames: z.number().int().min(1).max(12).default(6).describe('Number of animation frames'),
+    x: z.number().describe('X position'),
+    y: z.number().describe('Y position'),
+    width: z.number().describe('Display width per frame'),
+    height: z.number().describe('Display height per frame'),
+    name: z.string().optional().describe('Base name for the sprite group'),
+    parent_id: z.string().optional().describe('Parent group ID'),
+    remove_background: z.boolean().default(true).describe('Remove white background from sprites'),
+  },
+  async (args) => {
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('GEMINI_API_KEY environment variable is not set. Set it to your Google AI API key.');
+      }
+
+      const scene = getScene(args.scene_id);
+      savePrev(scene);
+
+      const baseName = args.name ?? 'sprite';
+
+      // 1. Generate sprite sheet
+      const sheetBuffer = await generateSpriteSheet(args.prompt, args.frames, apiKey);
+
+      // 2. Slice into frames
+      let frameBufs = await sliceSpriteSheet(sheetBuffer, args.frames);
+
+      // 3. Optionally remove white background
+      if (args.remove_background) {
+        frameBufs = await Promise.all(frameBufs.map(removeWhiteBg));
+      }
+
+      // 4. Create group
+      const group = addGroup(scene, { name: `${baseName}-sprites` }, args.parent_id);
+
+      // 5. Add each frame as image node
+      const frameIds: string[] = [];
+      for (let i = 0; i < frameBufs.length; i++) {
+        const href = `data:image/png;base64,${frameBufs[i].toString('base64')}`;
+        const node = addImage(scene, {
+          x: args.x,
+          y: args.y,
+          width: args.width,
+          height: args.height,
+          href,
+          name: `${baseName}-${i}`,
+          style: { opacity: i === 0 ? 1 : 0 },
+        }, group.id);
+        frameIds.push(node.id);
+      }
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: [
+            `Generated ${frameBufs.length}-frame sprite "${baseName}" in ${args.scene_id}`,
+            `Group: ${group.id} (${baseName}-sprites)`,
+            `Frames: ${frameIds.join(', ')}`,
+            `Frame 0 visible (opacity 1), others hidden (opacity 0).`,
+            `Use add_track with style.opacity keyframes to animate frame cycling.`,
+          ].join('\n'),
+        }],
       };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };

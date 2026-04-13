@@ -56,6 +56,10 @@ function formatNode(node: SceneNode, depth: number): string {
       const textPreview = node.text.length > 30 ? node.text.slice(0, 27) + '...' : node.text;
       return `${indent}[text]${nameStr} | ${node.x},${node.y} "${textPreview}"${fillStr ? ` fill:${fillStr}` : ''}${visStr}`;
     }
+    case 'image': {
+      const sizeKB = Math.round((node.href.length * 3) / 4 / 1024);
+      return `${indent}[image]${nameStr} | ${node.x},${node.y} ${node.width}x${node.height} (${sizeKB} KB)${visStr}`;
+    }
     case 'group': {
       const childCount = node.children.length;
       const header = `${indent}[group]${nameStr} (${childCount} children)${visStr}`;

@@ -117,6 +117,15 @@ export interface TextNode extends BaseNode {
   textAnchor?: 'start' | 'middle' | 'end';
 }
 
+export interface ImageNode extends BaseNode {
+  type: 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  href: string; // data URI (data:image/png;base64,...)
+}
+
 export interface GroupNode extends BaseNode {
   type: 'group';
   children: SceneNode[];
@@ -130,6 +139,7 @@ export type SceneNode =
   | PolygonNode
   | PathNode
   | TextNode
+  | ImageNode
   | GroupNode;
 
 export type ShapeNode = Exclude<SceneNode, TextNode | GroupNode>;
