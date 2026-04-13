@@ -24,6 +24,7 @@ import {
 } from './store.js';
 import { generateFrames, generateBuffers } from './animate.js';
 import { encodeGif } from './export-gif.js';
+import { encodeApng } from './export-apng.js';
 import type { Animation, Track, PathTrack, Keyframe, AnimatableProperty, EasingName, PlaybackMode } from './animation-types.js';
 import { findNode } from './scene.js';
 import { inspectScene } from './inspect.js';
@@ -681,6 +682,36 @@ server.tool(
           type: 'image' as const,
           data: gifBuffer.toString('base64'),
           mimeType: 'image/gif' as const,
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: export_apng ──
+
+server.tool(
+  'export_apng',
+  'Export an animation as a single animated PNG (APNG).',
+  {
+    anim_id: z.string().describe('Animation ID'),
+    delay: z.number().int().min(1).optional().describe('Frame delay in ms (default: 100)'),
+  },
+  async ({ anim_id, delay }) => {
+    try {
+      const anim = getAnimation(anim_id);
+      const scene = getScene(anim.sceneId);
+      const buffers = generateBuffers(scene, anim);
+      const apngBuffer = await encodeApng(buffers, {
+        delay: delay ?? anim.delay,
+      });
+      return {
+        content: [{
+          type: 'image' as const,
+          data: apngBuffer.toString('base64'),
+          mimeType: 'image/png' as const,
         }],
       };
     } catch (err) {

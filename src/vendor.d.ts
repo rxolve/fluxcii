@@ -25,25 +25,14 @@ declare module 'gifenc' {
   export default gifenc;
 }
 
-declare module 'sharp-apng' {
-  import type sharp from 'sharp';
+declare module 'upng-js' {
+  function encode(
+    frames: ArrayLike<ArrayBuffer | Buffer>[],
+    width: number,
+    height: number,
+    cnum: number,
+    delays: number[],
+  ): ArrayBuffer;
 
-  interface ApngOptions {
-    delay?: number | number[];
-    repeat?: number;
-    dispose?: number;
-    blend?: number;
-  }
-
-  function framesToApng(
-    images: sharp.Sharp[],
-    options?: ApngOptions,
-  ): Promise<{ buffer: Buffer }>;
-
-  function sharpToApng(
-    images: sharp.Sharp[],
-    options?: ApngOptions,
-  ): Promise<{ buffer: Buffer }>;
-
-  export { framesToApng, sharpToApng };
+  export { encode };
 }
