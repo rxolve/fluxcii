@@ -22,7 +22,8 @@ import {
   generateSceneId, storeScene, getScene, savePrev,
   generateAnimId, storeAnimation, getAnimation,
 } from './store.js';
-import { generateFrames } from './animate.js';
+import { generateFrames, generateBuffers } from './animate.js';
+import { encodeGif } from './export-gif.js';
 import type { Animation, Track, PathTrack, Keyframe, AnimatableProperty, EasingName, PlaybackMode } from './animation-types.js';
 import { findNode } from './scene.js';
 import { inspectScene } from './inspect.js';
@@ -649,6 +650,38 @@ server.tool(
             mimeType: 'image/png' as const,
           })),
         ],
+      };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: export_gif ──
+
+server.tool(
+  'export_gif',
+  'Export an animation as a single animated GIF.',
+  {
+    anim_id: z.string().describe('Animation ID'),
+    delay: z.number().int().min(1).optional().describe('Frame delay in ms (default: 100)'),
+    loop: z.boolean().optional().describe('Loop animation (default: true)'),
+  },
+  async ({ anim_id, delay, loop }) => {
+    try {
+      const anim = getAnimation(anim_id);
+      const scene = getScene(anim.sceneId);
+      const buffers = generateBuffers(scene, anim);
+      const gifBuffer = await encodeGif(buffers, scene.width, scene.height, {
+        delay: delay ?? anim.delay,
+        loop: loop ?? anim.loop,
+      });
+      return {
+        content: [{
+          type: 'image' as const,
+          data: gifBuffer.toString('base64'),
+          mimeType: 'image/gif' as const,
+        }],
       };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
