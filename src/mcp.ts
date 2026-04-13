@@ -38,7 +38,7 @@ import {
 } from './constants.js';
 
 const server = new McpServer({
-  name: 'vecscii',
+  name: 'fluxcii',
   version: '0.1.0',
 });
 

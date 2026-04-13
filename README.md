@@ -1,11 +1,11 @@
-# vecscii
+# fluxcii
 
-Vector illustration MCP server for AI agents. Create, animate, and export vector graphics through natural language.
+AI animation workbench — generate sprites, compose scenes, animate and export.
 
 ## Install
 
 ```bash
-npx vecscii
+npx fluxcii
 ```
 
 Or add to your MCP client config:
@@ -13,28 +13,35 @@ Or add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "vecscii": {
+    "fluxcii": {
       "command": "npx",
-      "args": ["-y", "vecscii"]
+      "args": ["-y", "fluxcii"],
+      "env": {
+        "GEMINI_API_KEY": "your-key-here"
+      }
     }
   }
 }
 ```
 
-## What it does
+## Pipeline
 
-vecscii gives AI agents a full vector graphics pipeline:
+**Generate → Compose → Animate → Export**
 
-1. **Build** scenes from shapes, text, and groups
-2. **Style** with fills, strokes, gradients, and palettes
-3. **Animate** with keyframe tracks, easing, and path animation
+1. **Generate** AI sprites from text prompts via Gemini
+2. **Compose** scenes with sprites, shapes, text, and groups
+3. **Animate** with keyframe tracks, easing, and path motion
 4. **Export** as GIF, animated PNG, or spritesheet
 
-All through MCP tools — no code generation needed.
+## MCP Tools (19)
 
-## MCP Tools (16)
+### Generate
 
-### Scene
+| Tool | Description |
+|------|-------------|
+| `generate_sprite` | AI sprite sheet generation via Gemini — auto-slices into frames and adds to scene |
+
+### Compose
 
 | Tool | Description |
 |------|-------------|
@@ -42,12 +49,13 @@ All through MCP tools — no code generation needed.
 | `new_scene` | Empty canvas, returns scene ID |
 | `add_shape` | Add rect, circle, ellipse, line, polygon, or path |
 | `add_text` | Add text node |
+| `add_image` | Add a raster image (PNG/JPEG) to a scene |
 | `add_group` | Create group container |
 | `set_style` | Apply fill, stroke, opacity to a node |
 | `inspect` | Get text tree of scene structure |
 | `render` | Render scene to PNG |
 
-### Animation
+### Animate
 
 | Tool | Description |
 |------|-------------|
@@ -65,11 +73,21 @@ All through MCP tools — no code generation needed.
 | `export_apng` | Export animation as animated PNG |
 | `export_spritesheet` | Export animation as tiled spritesheet |
 
+## Example prompt
+
+> "Generate a running pixel-art cat sprite, place it on a grassy field with clouds, animate it running across the screen, and export as GIF."
+
+The agent will:
+1. `generate_sprite` — AI-generate a cat run cycle
+2. `new_scene` + `add_image` — compose the background
+3. `create_animation` + `add_track` — animate position and frame cycling
+4. `export_gif` — produce the final animated file
+
 ## Features
 
-### Shapes
+### AI Sprite Generation
 
-8 node types: `rect`, `circle`, `ellipse`, `line`, `polygon`, `path`, `text`, `group`
+`generate_sprite` calls Gemini to create a sprite sheet from a text prompt, auto-slices it into frames, removes white backgrounds, and adds each frame to the scene as an image node. Requires `GEMINI_API_KEY`.
 
 ### Styling
 
@@ -80,42 +98,29 @@ All through MCP tools — no code generation needed.
 
 ### Palettes
 
-4 built-in color palettes:
-
-| ID | Theme |
-|----|-------|
-| `kurz-space` | Deep space, cosmic (default) |
-| `kurz-bio` | Biology, organic |
-| `kurz-tech` | Technology, digital |
-| `kurz-warm` | Warm, cozy |
+4 built-in color palettes: `kurz-space`, `kurz-bio`, `kurz-tech`, `kurz-warm`
 
 ### Animation
 
 - **Keyframes**: animate any numeric property or color over time
-- **Easing**: `linear`, `ease-in`, `ease-out`, `ease-in-out`, `ease-in-cubic`, `ease-out-cubic`, `ease-in-out-cubic`
+- **Easing**: `linear`, `ease-in`, `ease-out`, `ease-in-out`, cubic variants
 - **Playback modes**: `normal`, `reverse`, `pingpong`
 - **Track offset**: stagger animation start per track
-- **Path animation**: move nodes along SVG paths (M/L/C/Z)
+- **Path animation**: move nodes along SVG paths
 
 ### Export formats
 
 - **GIF**: animated GIF with configurable delay and loop
-- **APNG**: animated PNG (lossless, smaller files)
+- **APNG**: animated PNG (lossless)
 - **Spritesheet**: horizontal, vertical, or grid layout
-
-## Example prompt
-
-> "Draw a night sky with stars and a yellow moon. Animate a shooting star flying across with a trail."
-
-The agent will call `animate_illustration` with elements and tracks to produce a multi-frame animation, then `export_gif` to get a single animated file.
 
 ## Development
 
 ```bash
 npm install
-npm run build    # TypeScript → dist/
-npm test         # vitest (104 tests)
-npm run dev      # run with tsx
+npm run build
+npm test
+npm run dev
 ```
 
 ## Limits
@@ -125,10 +130,8 @@ npm run dev      # run with tsx
 | Scene dimensions | 1920 x 1080 |
 | Scenes in memory | 20 |
 | Nodes per scene | 200 |
-| Group nesting depth | 8 |
 | Animation frames | 32 |
 | Tracks per animation | 32 |
-| Animations in memory | 10 |
 
 ## License
 

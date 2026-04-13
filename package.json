@@ -1,13 +1,13 @@
 {
-  "name": "vecscii",
+  "name": "fluxcii",
   "version": "0.1.0",
-  "description": "Vector illustration MCP server for AI agents",
+  "description": "AI animation workbench — generate sprites, compose scenes, animate and export",
   "license": "MIT",
-  "mcpName": "io.github.rxolve/vecscii",
+  "mcpName": "io.github.rxolve/fluxcii",
   "type": "module",
   "main": "./dist/mcp.js",
   "bin": {
-    "vecscii": "dist/mcp.js"
+    "fluxcii": "dist/mcp.js"
   },
   "files": [
     "dist/",

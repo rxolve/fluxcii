@@ -25,7 +25,7 @@ describe('renderToBuffer', () => {
       },
     });
     addCircle(s, { cx: 100, cy: 100, r: 40, style: { fill: 'bright-blue' } });
-    addText(s, { x: 100, y: 180, text: 'vecscii', style: { fill: 'white' }, textAnchor: 'middle' });
+    addText(s, { x: 100, y: 180, text: 'fluxcii', style: { fill: 'white' }, textAnchor: 'middle' });
 
     const buf = renderToBuffer(s);
     expect(buf).toBeInstanceOf(Buffer);
