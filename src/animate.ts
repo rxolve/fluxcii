@@ -1,8 +1,9 @@
 import type { Scene, SceneNode, GroupNode } from './types.js';
-import type { Animation, Track, AnimatableProperty, PlaybackMode } from './animation-types.js';
+import type { Animation, Track, PathTrack, AnimatableProperty, PlaybackMode } from './animation-types.js';
 import { interpolateKeyframes } from './interpolate.js';
 import { renderToBase64, renderToBuffer } from './render.js';
 import { findNode } from './scene.js';
+import { parsePath, pointAtProgress } from './path-sample.js';
 
 // ── Property setter ──
 
@@ -104,7 +105,7 @@ export function resolveFrameSequence(totalFrames: number, mode: PlaybackMode = '
 
 // ── Apply all tracks to a scene snapshot for a given frame ──
 
-function applyFrame(scene: Scene, tracks: Track[], frame: number): Scene {
+function applyFrame(scene: Scene, tracks: Track[], frame: number, pathTracks?: PathTrack[]): Scene {
   const snapshot = structuredClone(scene);
   for (const track of tracks) {
     const node = track.nodeId === 'root'
@@ -115,6 +116,23 @@ function applyFrame(scene: Scene, tracks: Track[], frame: number): Scene {
     const value = interpolateKeyframes(track.keyframes, effectiveFrame, track.property);
     setProperty(node, track.property, value);
   }
+  // Path tracks: interpolate progress → pointAtProgress → set translate
+  if (pathTracks) {
+    for (const pt of pathTracks) {
+      const node = pt.nodeId === 'root'
+        ? snapshot.root
+        : findNode(snapshot.root, pt.nodeId);
+      if (!node) continue;
+      const effectiveFrame = frame - (pt.offset ?? 0);
+      const progress = interpolateKeyframes(pt.keyframes, effectiveFrame, 'transform.translate.x') as number;
+      const segments = parsePath(pt.path);
+      const point = pointAtProgress(segments, progress);
+      if (!node.transform) node.transform = {};
+      if (!node.transform.translate) node.transform.translate = { x: 0, y: 0 };
+      node.transform.translate.x = point.x;
+      node.transform.translate.y = point.y;
+    }
+  }
   return snapshot;
 }
 
@@ -124,7 +142,7 @@ export function generateBuffers(scene: Scene, animation: Animation): Buffer[] {
   const sequence = resolveFrameSequence(animation.totalFrames, animation.mode);
   const buffers: Buffer[] = [];
   for (const f of sequence) {
-    const snapshot = applyFrame(scene, animation.tracks, f);
+    const snapshot = applyFrame(scene, animation.tracks, f, animation.pathTracks);
     buffers.push(renderToBuffer(snapshot));
   }
   return buffers;

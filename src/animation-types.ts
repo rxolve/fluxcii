@@ -52,6 +52,13 @@ export interface Track {
   offset?: number;
 }
 
+export interface PathTrack {
+  nodeId: string;
+  path: string;
+  keyframes: Keyframe[];
+  offset?: number;
+}
+
 export type PlaybackMode = 'normal' | 'reverse' | 'pingpong';
 
 export interface Animation {
@@ -59,6 +66,7 @@ export interface Animation {
   sceneId: string;
   totalFrames: number;
   tracks: Track[];
+  pathTracks?: PathTrack[];
   delay?: number;
   loop?: boolean;
   mode?: PlaybackMode;

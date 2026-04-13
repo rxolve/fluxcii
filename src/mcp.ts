@@ -23,7 +23,7 @@ import {
   generateAnimId, storeAnimation, getAnimation,
 } from './store.js';
 import { generateFrames } from './animate.js';
-import type { Animation, Track, Keyframe, AnimatableProperty, EasingName, PlaybackMode } from './animation-types.js';
+import type { Animation, Track, PathTrack, Keyframe, AnimatableProperty, EasingName, PlaybackMode } from './animation-types.js';
 import { findNode } from './scene.js';
 import { inspectScene } from './inspect.js';
 import type { Style, FillValue, Gradient, LinearGradient, RadialGradient, Point } from './types.js';
@@ -582,6 +582,44 @@ server.tool(
       };
       anim.tracks.push(track);
       return { content: [{ type: 'text' as const, text: `Added track: ${node_id}.${property} (${keyframes.length} keyframes) to ${anim_id}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+    }
+  },
+);
+
+// ── Tool: add_path_track ──
+
+server.tool(
+  'add_path_track',
+  'Add a path animation track. The node moves along an SVG path (M/L/C/Z). Keyframes control progress (0-1) along the path.',
+  {
+    anim_id: z.string().describe('Animation ID'),
+    node_id: z.string().describe('Node ID to animate along path'),
+    path: z.string().describe('SVG path d attribute (M, L, C, Z commands)'),
+    keyframes: z.array(KeyframeSchema).min(1).describe('Keyframes with progress values (0-1)'),
+    offset: z.number().int().min(0).optional().describe('Frame offset (delays this track by N frames)'),
+  },
+  async ({ anim_id, node_id, path, keyframes, offset }) => {
+    try {
+      const anim = getAnimation(anim_id);
+      const scene = getScene(anim.sceneId);
+      if (node_id !== 'root' && !findNode(scene.root, node_id)) {
+        throw new Error(`Node "${node_id}" not found in scene ${anim.sceneId}`);
+      }
+      const pathTrack: PathTrack = {
+        nodeId: node_id,
+        path,
+        keyframes: keyframes.map((kf) => ({
+          frame: kf.frame,
+          value: kf.value,
+          easing: kf.easing as EasingName | undefined,
+        })),
+        offset,
+      };
+      if (!anim.pathTracks) anim.pathTracks = [];
+      anim.pathTracks.push(pathTrack);
+      return { content: [{ type: 'text' as const, text: `Added path track for ${node_id} (${keyframes.length} keyframes) to ${anim_id}` }] };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
     }
