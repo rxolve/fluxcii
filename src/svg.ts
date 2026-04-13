@@ -9,6 +9,7 @@ import type {
   PolygonNode,
   PathNode,
   TextNode,
+  ImageNode,
   Style,
   FillValue,
   Gradient,
@@ -65,6 +66,8 @@ function nodeToSvg(node: SceneNode, ctx: SvgContext, palette: ReturnType<typeof 
       return pathToSvg(node, styleAttrs, transformAttr);
     case 'text':
       return textToSvg(node, styleAttrs, transformAttr);
+    case 'image':
+      return imageToSvg(node, resolvedStyle, transformAttr);
     case 'group':
       return groupToSvg(node, ctx, palette, styleAttrs, transformAttr);
   }
@@ -104,6 +107,11 @@ function textToSvg(n: TextNode, style: string, transform: string): string {
   const anchor = n.textAnchor ? ` text-anchor="${n.textAnchor}"` : '';
   const escaped = escapeXml(n.text);
   return `  <text x="${n.x}" y="${n.y}" font-size="${fontSize}" font-family="${fontFamily}"${weight}${anchor}${style}${transform}>${escaped}</text>`;
+}
+
+function imageToSvg(n: ImageNode, style: Style | undefined, transform: string): string {
+  const opacity = style?.opacity !== undefined ? ` opacity="${style.opacity}"` : '';
+  return `  <image href="${n.href}" x="${n.x}" y="${n.y}" width="${n.width}" height="${n.height}"${opacity}${transform}/>`;
 }
 
 function groupToSvg(

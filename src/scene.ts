@@ -9,6 +9,7 @@ import type {
   PolygonNode,
   PathNode,
   TextNode,
+  ImageNode,
   Style,
   Transform,
   Point,
@@ -199,6 +200,18 @@ export function addText(
   checkLimits(scene, parentId);
   const parent = resolveParent(scene, parentId);
   const node: TextNode = { id: nextNodeId(), type: 'text', ...props };
+  parent.children.push(node);
+  return node;
+}
+
+export function addImage(
+  scene: Scene,
+  props: { x: number; y: number; width: number; height: number; href: string; name?: string; style?: Style; transform?: Transform },
+  parentId?: string,
+): ImageNode {
+  checkLimits(scene, parentId);
+  const parent = resolveParent(scene, parentId);
+  const node: ImageNode = { id: nextNodeId(), type: 'image', ...props };
   parent.children.push(node);
   return node;
 }
