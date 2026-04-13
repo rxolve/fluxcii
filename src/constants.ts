@@ -12,6 +12,9 @@ export const DEFAULT_PALETTE = 'kurz-space';
 export const DEFAULT_FONT_SIZE = 24;
 export const DEFAULT_FONT_FAMILY = 'sans-serif';
 
+// Animation defaults
+export const DEFAULT_FRAME_DELAY = 100;
+
 // Animation limits
 export const MAX_ANIMATION_FRAMES = 32;
 export const MAX_TRACKS_PER_ANIMATION = 32;

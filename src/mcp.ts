@@ -23,13 +23,13 @@ import {
   generateAnimId, storeAnimation, getAnimation,
 } from './store.js';
 import { generateFrames } from './animate.js';
-import type { Animation, Track, Keyframe, AnimatableProperty, EasingName } from './animation-types.js';
+import type { Animation, Track, Keyframe, AnimatableProperty, EasingName, PlaybackMode } from './animation-types.js';
 import { findNode } from './scene.js';
 import { inspectScene } from './inspect.js';
 import type { Style, FillValue, Gradient, LinearGradient, RadialGradient, Point } from './types.js';
 import {
   DEFAULT_WIDTH, DEFAULT_HEIGHT, MAX_SCENE_WIDTH, MAX_SCENE_HEIGHT,
-  MAX_ANIMATION_FRAMES, MAX_TRACKS_PER_ANIMATION,
+  MAX_ANIMATION_FRAMES, MAX_TRACKS_PER_ANIMATION, DEFAULT_FRAME_DELAY,
 } from './constants.js';
 
 const server = new McpServer({
@@ -433,10 +433,14 @@ const KeyframeSchema = z.object({
   easing: EasingNameSchema,
 });
 
+const PlaybackModeSchema = z.enum(['normal', 'reverse', 'pingpong']).optional()
+  .describe('Playback mode (default: normal)');
+
 const TrackSchema = z.object({
   node_name: z.string().describe('Name of the element to animate (matches element name)'),
   property: AnimatablePropertySchema,
   keyframes: z.array(KeyframeSchema).min(1).describe('Keyframe values'),
+  offset: z.number().int().min(0).optional().describe('Frame offset (delays this track by N frames)'),
 });
 
 // ── Tool: animate_illustration ──
@@ -452,8 +456,11 @@ server.tool(
     elements: z.array(ElementSchema).describe('Array of shape/text/group elements'),
     total_frames: z.number().int().min(1).max(MAX_ANIMATION_FRAMES).describe('Total number of frames'),
     tracks: z.array(TrackSchema).max(MAX_TRACKS_PER_ANIMATION).describe('Animation tracks (use node_name to reference elements)'),
+    delay: z.number().int().min(1).optional().describe('Frame delay in ms (default: 100)'),
+    loop: z.boolean().optional().describe('Loop animation (default: true)'),
+    mode: PlaybackModeSchema,
   },
-  async ({ width, height, background, palette, elements, total_frames, tracks }) => {
+  async ({ width, height, background, palette, elements, total_frames, tracks, delay, loop, mode }) => {
     try {
       const id = generateSceneId();
       const scene = createScene(id, width, height, background, palette);
@@ -475,6 +482,7 @@ server.tool(
             value: kf.value,
             easing: kf.easing as EasingName | undefined,
           })),
+          offset: t.offset,
         });
       }
 
@@ -483,6 +491,9 @@ server.tool(
         sceneId: scene.id,
         totalFrames: total_frames,
         tracks: resolvedTracks,
+        delay,
+        loop,
+        mode: mode as PlaybackMode | undefined,
       };
       storeAnimation(animation);
 
@@ -512,8 +523,11 @@ server.tool(
   {
     scene_id: z.string().describe('Scene ID'),
     total_frames: z.number().int().min(1).max(MAX_ANIMATION_FRAMES).describe('Total number of frames'),
+    delay: z.number().int().min(1).optional().describe('Frame delay in ms (default: 100)'),
+    loop: z.boolean().optional().describe('Loop animation (default: true)'),
+    mode: PlaybackModeSchema,
   },
-  async ({ scene_id, total_frames }) => {
+  async ({ scene_id, total_frames, delay, loop, mode }) => {
     try {
       getScene(scene_id); // validate scene exists
       const anim: Animation = {
@@ -521,6 +535,9 @@ server.tool(
         sceneId: scene_id,
         totalFrames: total_frames,
         tracks: [],
+        delay,
+        loop,
+        mode: mode as PlaybackMode | undefined,
       };
       storeAnimation(anim);
       return { content: [{ type: 'text' as const, text: `Created animation ${anim.id} for scene ${scene_id} (${total_frames} frames)` }] };
@@ -540,8 +557,9 @@ server.tool(
     node_id: z.string().describe('Node ID to animate'),
     property: AnimatablePropertySchema,
     keyframes: z.array(KeyframeSchema).min(1).describe('Keyframe values'),
+    offset: z.number().int().min(0).optional().describe('Frame offset (delays this track by N frames)'),
   },
-  async ({ anim_id, node_id, property, keyframes }) => {
+  async ({ anim_id, node_id, property, keyframes, offset }) => {
     try {
       const anim = getAnimation(anim_id);
       if (anim.tracks.length >= MAX_TRACKS_PER_ANIMATION) {
@@ -560,6 +578,7 @@ server.tool(
           value: kf.value,
           easing: kf.easing as EasingName | undefined,
         })),
+        offset,
       };
       anim.tracks.push(track);
       return { content: [{ type: 'text' as const, text: `Added track: ${node_id}.${property} (${keyframes.length} keyframes) to ${anim_id}` }] };

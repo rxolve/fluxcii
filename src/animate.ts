@@ -1,7 +1,7 @@
 import type { Scene, SceneNode, GroupNode } from './types.js';
-import type { Animation, Track, AnimatableProperty } from './animation-types.js';
+import type { Animation, Track, AnimatableProperty, PlaybackMode } from './animation-types.js';
 import { interpolateKeyframes } from './interpolate.js';
-import { renderToBase64 } from './render.js';
+import { renderToBase64, renderToBuffer } from './render.js';
 import { findNode } from './scene.js';
 
 // ── Property setter ──
@@ -82,6 +82,26 @@ function setProperty(node: SceneNode, property: AnimatableProperty, value: numbe
   }
 }
 
+// ── Playback mode → frame index sequence ──
+
+export function resolveFrameSequence(totalFrames: number, mode: PlaybackMode = 'normal'): number[] {
+  const indices: number[] = [];
+  switch (mode) {
+    case 'reverse':
+      for (let i = totalFrames - 1; i >= 0; i--) indices.push(i);
+      break;
+    case 'pingpong':
+      for (let i = 0; i < totalFrames; i++) indices.push(i);
+      for (let i = totalFrames - 2; i >= 1; i--) indices.push(i);
+      break;
+    case 'normal':
+    default:
+      for (let i = 0; i < totalFrames; i++) indices.push(i);
+      break;
+  }
+  return indices;
+}
+
 // ── Apply all tracks to a scene snapshot for a given frame ──
 
 function applyFrame(scene: Scene, tracks: Track[], frame: number): Scene {
@@ -91,21 +111,30 @@ function applyFrame(scene: Scene, tracks: Track[], frame: number): Scene {
       ? snapshot.root
       : findNode(snapshot.root, track.nodeId);
     if (!node) continue;
-    const value = interpolateKeyframes(track.keyframes, frame, track.property);
+    const effectiveFrame = frame - (track.offset ?? 0);
+    const value = interpolateKeyframes(track.keyframes, effectiveFrame, track.property);
     setProperty(node, track.property, value);
   }
   return snapshot;
 }
 
-// ── Generate all frames ──
+// ── Generate PNG buffers for all frames ──
+
+export function generateBuffers(scene: Scene, animation: Animation): Buffer[] {
+  const sequence = resolveFrameSequence(animation.totalFrames, animation.mode);
+  const buffers: Buffer[] = [];
+  for (const f of sequence) {
+    const snapshot = applyFrame(scene, animation.tracks, f);
+    buffers.push(renderToBuffer(snapshot));
+  }
+  return buffers;
+}
+
+// ── Generate all frames as base64 ──
 
 export function generateFrames(scene: Scene, animation: Animation): string[] {
-  const frames: string[] = [];
-  for (let f = 0; f < animation.totalFrames; f++) {
-    const snapshot = applyFrame(scene, animation.tracks, f);
-    frames.push(renderToBase64(snapshot));
-  }
-  return frames;
+  const buffers = generateBuffers(scene, animation);
+  return buffers.map((buf) => buf.toString('base64'));
 }
 
 /** Evaluate a single track at a given frame (for testing). */

@@ -49,11 +49,17 @@ export interface Track {
   nodeId: string;
   property: AnimatableProperty;
   keyframes: Keyframe[];
+  offset?: number;
 }
+
+export type PlaybackMode = 'normal' | 'reverse' | 'pingpong';
 
 export interface Animation {
   id: string;
   sceneId: string;
   totalFrames: number;
   tracks: Track[];
+  delay?: number;
+  loop?: boolean;
+  mode?: PlaybackMode;
 }
