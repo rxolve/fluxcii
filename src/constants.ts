@@ -16,8 +16,8 @@ export const DEFAULT_FONT_FAMILY = 'sans-serif';
 export const DEFAULT_FRAME_DELAY = 100;
 
 // Animation limits
-export const MAX_ANIMATION_FRAMES = 32;
-export const MAX_TRACKS_PER_ANIMATION = 32;
+export const MAX_ANIMATION_FRAMES = 240;
+export const MAX_TRACKS_PER_ANIMATION = 64;
 export const MAX_ANIMATION_COUNT = 10;
 
 // IDs

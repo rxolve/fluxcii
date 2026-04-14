@@ -1,4 +1,4 @@
-import type { Scene, GroupNode } from './types.js';
+import type { Scene, GroupNode, SceneNode } from './types.js';
 import type { Animation } from './animation-types.js';
 import { MAX_SCENE_COUNT, MAX_ANIMATION_COUNT, SCENE_ID_PREFIX, ANIM_ID_PREFIX } from './constants.js';
 
@@ -82,6 +82,41 @@ export function hasAnimation(id: string): boolean {
 
 export function animationCount(): number {
   return animStore.size;
+}
+
+// ── List / delete ──
+
+function countNodesInGroup(node: SceneNode): number {
+  if (node.type === 'group') {
+    return 1 + (node as { children: SceneNode[] }).children.reduce((sum: number, c: SceneNode) => sum + countNodesInGroup(c), 0);
+  }
+  return 1;
+}
+
+export function listScenes(): { id: string; width: number; height: number; nodeCount: number }[] {
+  return [...sceneStore.values()].map((s) => ({
+    id: s.id,
+    width: s.width,
+    height: s.height,
+    nodeCount: s.root.children.reduce((sum, c) => sum + countNodesInGroup(c), 0),
+  }));
+}
+
+export function listAnimations(): { id: string; sceneId: string; totalFrames: number; trackCount: number }[] {
+  return [...animStore.values()].map((a) => ({
+    id: a.id,
+    sceneId: a.sceneId,
+    totalFrames: a.totalFrames,
+    trackCount: a.tracks.length + (a.pathTracks?.length ?? 0),
+  }));
+}
+
+export function deleteScene(id: string): boolean {
+  return sceneStore.delete(id);
+}
+
+export function deleteAnimation(id: string): boolean {
+  return animStore.delete(id);
 }
 
 /** For testing. */

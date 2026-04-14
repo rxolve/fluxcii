@@ -1,5 +1,5 @@
-import type { AnimatableProperty, EasingName, Keyframe } from './animation-types.js';
-import { getEasing } from './easing.js';
+import type { AnimatableProperty, Keyframe } from './animation-types.js';
+import { resolveEasing } from './easing.js';
 
 // ── Color helpers ──
 
@@ -75,7 +75,7 @@ export function interpolateKeyframes(
   // Compute progress and apply easing from kfA
   const span = kfB.frame - kfA.frame;
   const raw = span === 0 ? 1 : (frame - kfA.frame) / span;
-  const easing = getEasing(kfA.easing);
+  const easing = resolveEasing(kfA.easing);
   const t = easing(raw);
 
   if (isColorProperty(property)) {

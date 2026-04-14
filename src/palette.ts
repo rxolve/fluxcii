@@ -33,6 +33,16 @@ export function listPalettes(): Palette[] {
   return [...palettes.values()];
 }
 
+/** Register a custom palette at runtime. */
+export function registerPalette(palette: Palette): void {
+  palettes.set(palette.id, palette);
+}
+
+/** Delete a custom palette. Returns false if not found. */
+export function deletePalette(id: string): boolean {
+  return palettes.delete(id);
+}
+
 /** Resolve a palette color name to hex. Returns input unchanged if not found. */
 export function resolveColorName(name: string, palette: Palette): string {
   const entry = palette.colors.find((c) => c.name === name);
