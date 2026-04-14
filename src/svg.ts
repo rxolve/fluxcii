@@ -14,6 +14,7 @@ import type {
   FillValue,
   Gradient,
   Transform,
+  Filter,
 } from './types.js';
 import { getPalette, resolveColorName } from './palette.js';
 import { resolveStyle } from './style.js';
@@ -22,11 +23,12 @@ import { DEFAULT_FONT_SIZE, DEFAULT_FONT_FAMILY } from './constants.js';
 interface SvgContext {
   defs: string[];
   gradientCounter: number;
+  filterCounter: number;
   paletteId?: string;
 }
 
 export function sceneToSvg(scene: Scene): string {
-  const ctx: SvgContext = { defs: [], gradientCounter: 0, paletteId: scene.palette };
+  const ctx: SvgContext = { defs: [], gradientCounter: 0, filterCounter: 0, paletteId: scene.palette };
   const palette = getPalette(scene.palette);
 
   const bg = scene.background
@@ -50,26 +52,30 @@ function nodeToSvg(node: SceneNode, ctx: SvgContext, palette: ReturnType<typeof 
   const resolvedStyle = node.style ? resolveStyle(node.style, palette) : undefined;
   const styleAttrs = resolvedStyle ? buildStyleAttrs(resolvedStyle, ctx) : '';
   const transformAttr = node.transform ? ` transform="${buildTransform(node.transform)}"` : '';
+  const filterAttr = resolvedStyle?.filter ? buildFilterAttr(resolvedStyle.filter, ctx) : '';
+  const clipAttr = resolvedStyle?.clip ? ` clip-path="url(#clip-${resolvedStyle.clip})"` : '';
+  const maskAttr = resolvedStyle?.mask ? ` mask="url(#mask-${resolvedStyle.mask})"` : '';
+  const extraAttrs = filterAttr + clipAttr + maskAttr;
 
   switch (node.type) {
     case 'rect':
-      return rectToSvg(node, styleAttrs, transformAttr);
+      return rectToSvg(node, styleAttrs, transformAttr + extraAttrs);
     case 'circle':
-      return circleToSvg(node, styleAttrs, transformAttr);
+      return circleToSvg(node, styleAttrs, transformAttr + extraAttrs);
     case 'ellipse':
-      return ellipseToSvg(node, styleAttrs, transformAttr);
+      return ellipseToSvg(node, styleAttrs, transformAttr + extraAttrs);
     case 'line':
-      return lineToSvg(node, styleAttrs, transformAttr);
+      return lineToSvg(node, styleAttrs, transformAttr + extraAttrs);
     case 'polygon':
-      return polygonToSvg(node, styleAttrs, transformAttr);
+      return polygonToSvg(node, styleAttrs, transformAttr + extraAttrs);
     case 'path':
-      return pathToSvg(node, styleAttrs, transformAttr);
+      return pathToSvg(node, styleAttrs, transformAttr + extraAttrs);
     case 'text':
-      return textToSvg(node, styleAttrs, transformAttr);
+      return textToSvg(node, styleAttrs, transformAttr + extraAttrs);
     case 'image':
-      return imageToSvg(node, resolvedStyle, transformAttr);
+      return imageToSvg(node, resolvedStyle, transformAttr + extraAttrs);
     case 'group':
-      return groupToSvg(node, ctx, palette, styleAttrs, transformAttr);
+      return groupToSvg(node, ctx, palette, styleAttrs, transformAttr + extraAttrs);
   }
 }
 
@@ -126,6 +132,38 @@ function groupToSvg(
     .map((c) => nodeToSvg(c, ctx, palette))
     .join('\n');
   return `  <g${style}${transform}>\n${children}\n  </g>`;
+}
+
+// ── Filter support ──
+
+function buildFilterAttr(filter: Filter, ctx: SvgContext): string {
+  const parts: string[] = [];
+
+  if (filter.blur) {
+    parts.push(`    <feGaussianBlur in="SourceGraphic" stdDeviation="${filter.blur}"/>`);
+  }
+
+  if (filter.dropShadow) {
+    const ds = filter.dropShadow;
+    parts.push(`    <feDropShadow dx="${ds.dx}" dy="${ds.dy}" stdDeviation="${ds.blur}" flood-color="${ds.color}"/>`);
+  }
+
+  if (filter.glow) {
+    const g = filter.glow;
+    parts.push(`    <feGaussianBlur in="SourceGraphic" stdDeviation="${g.radius}" result="glow"/>`);
+    parts.push(`    <feFlood flood-color="${g.color}" result="glowColor"/>`);
+    parts.push(`    <feComposite in="glowColor" in2="glow" operator="in" result="coloredGlow"/>`);
+    parts.push(`    <feMerge>`);
+    parts.push(`      <feMergeNode in="coloredGlow"/>`);
+    parts.push(`      <feMergeNode in="SourceGraphic"/>`);
+    parts.push(`    </feMerge>`);
+  }
+
+  if (parts.length === 0) return '';
+
+  const filterId = `filter${++ctx.filterCounter}`;
+  ctx.defs.push(`    <filter id="${filterId}">\n${parts.join('\n')}\n    </filter>`);
+  return ` filter="url(#${filterId})"`;
 }
 
 // ── Style attributes ──

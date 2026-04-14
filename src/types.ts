@@ -38,10 +38,26 @@ export interface Stroke {
   dasharray?: string;
 }
 
+export interface DropShadow {
+  dx: number;
+  dy: number;
+  blur: number;
+  color: string;
+}
+
+export interface Filter {
+  blur?: number;
+  dropShadow?: DropShadow;
+  glow?: { radius: number; color: string };
+}
+
 export interface Style {
   fill?: FillValue;
   stroke?: Stroke;
   opacity?: number; // 0–1
+  filter?: Filter;
+  clip?: string;   // reference to a path node ID for clipPath
+  mask?: string;    // reference to a node ID for mask
 }
 
 // ── Transform ──
@@ -144,6 +160,18 @@ export type SceneNode =
 
 export type ShapeNode = Exclude<SceneNode, TextNode | GroupNode>;
 
+// ── Layer ──
+
+export interface Layer {
+  id: string;
+  name: string;
+  groupId: string;   // references a GroupNode
+  visible: boolean;
+  locked: boolean;
+  opacity: number;
+  order: number;
+}
+
 // ── Scene ──
 
 export interface Scene {
@@ -154,6 +182,7 @@ export interface Scene {
   root: GroupNode;
   palette?: string; // palette ID
   prev?: GroupNode; // for undo
+  layers?: Layer[];
 }
 
 // ── Palette ──

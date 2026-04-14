@@ -7,7 +7,21 @@ export type EasingName =
   | 'ease-in-out'
   | 'ease-in-cubic'
   | 'ease-out-cubic'
-  | 'ease-in-out-cubic';
+  | 'ease-in-out-cubic'
+  | 'bounce'
+  | 'elastic'
+  | 'back'
+  | 'ease-in-expo'
+  | 'ease-out-expo'
+  | 'step-start'
+  | 'step-end';
+
+export interface CubicBezier {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
 
 // ── Animatable properties ──
 
@@ -42,7 +56,7 @@ export type AnimatableProperty =
 export interface Keyframe {
   frame: number;
   value: number | string;
-  easing?: EasingName;
+  easing?: EasingName | CubicBezier;
 }
 
 export interface Track {
