@@ -12,6 +12,8 @@ import { registerManageTools } from './tools/manage-tools.js';
 import { registerLayerTools } from './tools/layer-tools.js';
 import { registerAssetTools } from './tools/asset-tools.js';
 import { registerComposeTools } from './tools/compose-tools.js';
+import { registerHDTools } from './tools/hd.js';
+import { registerDirectorTools } from './tools/director.js';
 import { registerProvider } from './ai/provider.js';
 import { GeminiProvider } from './ai/gemini.js';
 
@@ -29,6 +31,8 @@ registerManageTools(server);
 registerLayerTools(server);
 registerAssetTools(server);
 registerComposeTools(server);
+registerHDTools(server);
+registerDirectorTools(server);
 
 async function main() {
   await loadPalettes();

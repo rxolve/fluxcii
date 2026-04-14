@@ -23,3 +23,24 @@ export const MAX_ANIMATION_COUNT = 10;
 // IDs
 export const SCENE_ID_PREFIX = 'scn';
 export const ANIM_ID_PREFIX = 'anim';
+
+// ── HD constants ──
+
+// HD scene limits
+export const HD_MAX_SCENE_WIDTH = 3840;
+export const HD_MAX_SCENE_HEIGHT = 2160;
+export const HD_MAX_SCENE_COUNT = 20;
+export const HD_MAX_LAYERS_PER_SCENE = 50;
+
+// HD defaults
+export const HD_DEFAULT_WIDTH = 1920;
+export const HD_DEFAULT_HEIGHT = 1080;
+
+// HD animation limits
+export const HD_MAX_ANIMATION_FRAMES = 240;
+export const HD_MAX_TRACKS_PER_ANIMATION = 64;
+export const HD_MAX_ANIMATION_COUNT = 10;
+
+// HD IDs
+export const HD_SCENE_ID_PREFIX = 'hd-scn';
+export const HD_ANIM_ID_PREFIX = 'hd-anim';
